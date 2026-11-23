@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ZOYA Ledger</title>
+<style>
+:root{--bg:#f6f4f0;--card:#fff;--ink:#1d1b20;--mut:#6b6670;--pri:#5b3fa0;--pri2:#ede7fa;--red:#c0392b;--grn:#1e8449;--line:#e4e0e8}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:var(--pri);color:#fff;padding:14px 16px}
+header h1{margin:0;font-size:18px}
+header small{opacity:.8}
+nav{display:flex;gap:6px;padding:10px 12px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5;overflow-x:auto}
+nav button{flex:1;white-space:nowrap}
+main{padding:12px;max-width:900px;margin:0 auto}
+button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer;text-decoration:none;display:inline-block}
+button.pri,.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+button.on{background:var(--pri2);border-color:var(--pri);color:var(--pri);font-weight:600}
+button.danger{color:var(--red)}
+button.wa{background:#25d366;border-color:#25d366;color:#fff}
+input,select,textarea{font:inherit;width:100%;padding:9px;border:1px solid var(--line);border-radius:8px;background:#fff}
+label{display:block;font-size:13px;color:var(--mut);margin:10px 0 4px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.sp{flex:1}
+.mut{color:var(--mut);font-size:13px}
+.bal{font-weight:700;font-size:17px}
+.due{color:var(--red)}.ok{color:var(--grn)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px}
+.stat b{display:block;font-size:19px;margin-top:2px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;font-size:14px}
+th{background:var(--pri2);font-size:12px;text-transform:uppercase;letter-spacing:.03em}
+td.n,th.n{text-align:right}
+.tw{overflow-x:auto}
+.low{background:#fff4f2}
+dialog{border:none;border-radius:14px;padding:16px;width:min(420px,94vw)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.empty{text-align:center;color:var(--mut);padding:24px}
+.printhead{display:none}
+#login{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+section{display:none}section.active{display:block}
+@media print{
+ header,nav,.noprint,button{display:none!important}
+ body{background:#fff}
+ .printhead{display:block;margin-bottom:10px}
+ section{display:none!important}section.active{display:block!important}
+ table,.card{border-color:#999}
+}
+</style>
+</head>
+<body>
+<header class="noprint" style="display:flex;align-items:center;gap:8px"><div class="sp"><h1>ZOYA Crystal &amp; Export</h1><small>Customer ledger &amp; stock &bull; Khambhat, Gujarat</small></div><button id="logout" style="padding:6px 10px">Logout</button></header>
+<nav>
+ <button data-tab="customers" class="on">Customers</button>
+ <button data-tab="ledger">Ledger</button>
+ <button data-tab="stock">Stock</button>
+ <button data-tab="backup">Backup</button>
+</nav>
+<main>
+
+<section id="customers" class="active">
+ <div class="stats noprint">
+  <div class="stat"><span class="mut">Customers</span><b id="stCust">0</b></div>
+  <div class="stat"><span class="mut">Total baaki</span><b id="stDue" class="due">₹0</b></div>
+ </div>
+ <div class="row noprint" style="margin-bottom:10px">
+  <input id="custSearch" placeholder="Customer search (naam / phone / city)" class="sp">
+  <button class="pri" id="addCust">+ Customer</button>
+ </div>
+ <div id="custList"></div>
+</section>
+
+<section id="ledger">
+ <div class="noprint">
+  <label>Customer chuniye</label>
+  <select id="ledCust"></select>
+ </div>
+ <div id="ledBody"></div>
+</section>
+
+<section id="stock">
+ <div class="stats noprint">
+  <div class="stat"><span class="mut">Items</span><b id="stItems">0</b></div>
+  <div class="stat"><span class="mut">Stock value</span><b id="stVal">₹0</b></div>
+ </div>
+ <div class="row noprint" style="margin-bottom:10px">
+  <input id="stockSearch" placeholder="Stock search" class="sp">
+  <button class="pri" id="addStock">+ Item</button>
+  <button id="stockCsv">CSV</button>
+  <button id="stockPrint">Print / PDF</button>
+ </div>
+ <div class="printhead"><h2>ZOYA Crystal &amp; Export — Stock List</h2><div class="mut" id="stockDate"></div></div>
+ <div class="tw" id="stockTable"></div>
+</section>
+
+<section id="backup">
+ <div class="card">
+  <b>Data backup</b>
+  <p class="mut">Data Firebase cloud mein save hota hai aur login ke baad kisi bhi phone/computer par dikhta hai. Phir bhi kabhi-kabhi (jaise mahine mein ek baar) backup download kar lijiye.</p>
+  <div class="row">
+   <button class="pri" id="expJson">Backup download (JSON)</button>
+   <button id="impBtn">Backup restore</button>
+   <input type="file" id="impFile" accept=".json" hidden>
+  </div>
+ </div>
+ <div class="card">
+  <b>Sab CSV export</b>
+  <div class="row" style="margin-top:8px">
+   <button id="csvCust">Customers + balance</button>
+   <button id="csvAll">Saari ledger entries</button>
+  </div>
+ </div>
+</section>
+
+</main>
+
+<div id="login"><form id="loginForm" class="card" style="width:min(380px,100%)"><h2 style="margin:0 0 4px">ZOYA Ledger</h2><div class="mut">Admin login</div><label>Email</label><input id="lEmail" type="email" required autocomplete="username"><label>Password</label><input id="lPass" type="password" required autocomplete="current-password"><div id="loginErr" class="due" style="margin-top:8px"></div><button class="pri" style="width:100%;margin-top:12px">Login</button></form></div>
+
+<dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot,writeBatch} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDWnIKVJOP7YY0v47Bg7qIxEsOaQ2I9rT4",
+  authDomain: "zoya-ledger.firebaseapp.com",
+  projectId: "zoya-ledger",
+  storageBucket: "zoya-ledger.firebasestorage.app",
+  messagingSenderId: "516200683627",
+  appId: "1:516200683627:web:2e49ec66767a2d9a25792e"
+};
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const fs=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+const COLS=['customers','entries','stock'];
+const empty=()=>({customers:[],entries:[],stock:[]});
+let db=empty();
+let unsubs=[];
+function fail(e){alert('Save nahi hua: '+(e.code||e.message)+'\nInternet aur Firestore rules check kijiye.')}
+function put(col,obj){return setDoc(doc(fs,col,obj.id),obj).catch(fail)}
+function del(col,id){return deleteDoc(doc(fs,col,id)).catch(fail)}
+async function delMany(list){try{for(let i=0;i<list.length;i+=400){const b=writeBatch(fs);list.slice(i,i+400).forEach(([c,id])=>b.delete(doc(fs,c,id)));await b.commit()}}catch(e){fail(e)}}
+async function replaceAll(d){
+  try{
+    await delMany(COLS.flatMap(c=>db[c].map(x=>[c,x.id])));
+    const nw=COLS.flatMap(c=>(d[c]||[]).map(x=>[c,x]));
+    for(let i=0;i<nw.length;i+=400){const b=writeBatch(fs);nw.slice(i,i+400).forEach(([c,x])=>b.set(doc(fs,c,x.id),x));await b.commit()}
+    alert('Restore ho gaya');
+  }catch(e){fail(e)}
+}
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const inr=n=>'₹'+Number(n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=d=>{const [y,m,dd]=d.split('-');return `${dd}-${m}-${y}`};
+
+function balance(cid){return db.entries.filter(e=>e.cid===cid).reduce((s,e)=>s+(e.type==='debit'?e.amount:-e.amount),0)}
+function waLink(c,msg){let p=String(c.phone||'').replace(/\D/g,'');if(p.length===10)p='91'+p;return 'https://wa.me/'+p+'?text='+encodeURIComponent(msg)}
+function reminderMsg(c){const b=balance(c.id);return `Namaste ${c.name} ji, ZOYA Crystal & Export ki taraf se yaad dilana tha ki aapka ${inr(b)} balance baaki hai. Kripya payment jaldi kar dijiye. Dhanyavaad.`}
+
+function csvCell(v){v=String(v??'');return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}
+function downloadCSV(name,rows){
+  const t='\ufeff'+rows.map(r=>r.map(csvCell).join(',')).join('\n');
+  dl(name,new Blob([t],{type:'text/csv;charset=utf-8'}));
+}
+function dl(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+
+/* ---------- Generic form dialog ---------- */
+function openForm(title,fields,vals,onSave){
+  const f=$('#dlgForm');
+  f.innerHTML=`<h3 style="margin:0 0 4px">${esc(title)}</h3>`+fields.map(x=>{
+    const v=vals[x.k]??x.def??'';
+    let inp;
+    if(x.type==='select')inp=`<select name="${x.k}">${x.options.map(o=>`<option value="${esc(o[0])}" ${o[0]==v?'selected':''}>${esc(o[1])}</option>`).join('')}</select>`;
+    else if(x.type==='textarea')inp=`<textarea name="${x.k}" rows="2">${esc(v)}</textarea>`;
+    else inp=`<input name="${x.k}" type="${x.type||'text'}" value="${esc(v)}" ${x.step?`step="${x.step}"`:''} ${x.req?'required':''} ${x.type==='tel'?'inputmode="tel"':''}>`;
+    return `<label>${esc(x.label)}${x.req?' *':''}</label>${inp}`;
+  }).join('')+`<div class="row" style="margin-top:14px"><span class="sp"></span><button type="button" id="dCancel">Cancel</button><button class="pri" type="submit">Save</button></div>`;
+  const d=$('#dlg');
+  $('#dCancel').onclick=()=>d.close();
+  f.onsubmit=e=>{e.preventDefault();const o={};new FormData(f).forEach((v,k)=>o[k]=v);onSave(o);d.close()};
+  d.showModal();
+}
+
+/* ---------- Tabs ---------- */
+let curLed=null;
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function showTab(t){
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('active',s.id===t));
+  render();
+}
+
+/* ---------- Customers ---------- */
+$('#addCust').onclick=()=>editCust({});
+$('#custSearch').oninput=renderCust;
+function custFields(){return [{k:'name',label:'Naam',req:1},{k:'phone',label:'Phone (WhatsApp)',type:'tel'},{k:'city',label:'City / Country'},{k:'notes',label:'Notes',type:'textarea'}]}
+function editCust(c){
+  openForm(c.id?'Customer edit':'Naya customer',custFields(),c,o=>{
+    if(c.id){Object.assign(c,o);put('customers',c)}else{const n={id:uid(),...o};curLed=n.id;put('customers',n)}
+  });
+}
+function renderCust(){
+  const q=$('#custSearch').value.toLowerCase();
+  const list=db.customers.filter(c=>[c.name,c.phone,c.city].join(' ').toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+  const tot=db.customers.reduce((s,c)=>s+Math.max(balance(c.id),0),0);
+  $('#stCust').textContent=db.customers.length;$('#stDue').textContent=inr(tot);
+  $('#custList').innerHTML=list.length?list.map(c=>{
+    const b=balance(c.id);
+    return `<div class="card"><div class="row"><div class="sp"><b>${esc(c.name)}</b><div class="mut">${esc(c.phone||'')} ${c.city?'• '+esc(c.city):''}</div></div>
+    <div class="bal ${b>0?'due':'ok'}">${inr(Math.abs(b))}<div class="mut" style="font-weight:400">${b>0?'baaki':b<0?'advance':'clear'}</div></div></div>
+    <div class="row" style="margin-top:8px">
+     <button data-a="led" data-id="${c.id}">Ledger</button>
+     ${c.phone&&b>0?`<a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(c,reminderMsg(c)))}">WhatsApp reminder</a>`:''}
+     <span class="sp"></span>
+     <button data-a="edit" data-id="${c.id}">Edit</button>
+     <button class="danger" data-a="del" data-id="${c.id}">Delete</button></div></div>`}).join(''):`<div class="empty">Abhi koi customer nahi. "+ Customer" dabaiye.</div>`;
+}
+$('#custList').onclick=e=>{
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const c=db.customers.find(x=>x.id===b.dataset.id);if(!c)return;
+  if(b.dataset.a==='led'){curLed=c.id;showTab('ledger')}
+  if(b.dataset.a==='edit')editCust(c);
+  if(b.dataset.a==='del'&&confirm(`${c.name} aur uski saari ledger entries delete karein?`)){
+    delMany([['customers',c.id],...db.entries.filter(x=>x.cid===c.id).map(x=>['entries',x.id])]);if(curLed===c.id)curLed=null;
+  }
+};
+
+/* ---------- Ledger ---------- */
+$('#ledCust').onchange=e=>{curLed=e.target.value;renderLedger()};
+function ledgerRows(cid){
+  let run=0;
+  return db.entries.filter(e=>e.cid===cid).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id)).map(e=>{run+=e.type==='debit'?e.amount:-e.amount;return {...e,run}});
+}
+function renderLedger(){
+  const sel=$('#ledCust');
+  const cs=[...db.customers].sort((a,b)=>a.name.localeCompare(b.name));
+  if(!cs.find(c=>c.id===curLed))curLed=cs[0]?.id||null;
+  sel.innerHTML=cs.map(c=>`<option value="${c.id}" ${c.id===curLed?'selected':''}>${esc(c.name)}</option>`).join('');
+  const body=$('#ledBody');
+  const c=cs.find(x=>x.id===curLed);
+  if(!c){body.innerHTML=`<div class="empty">Pehle Customers tab mein customer add kijiye.</div>`;return}
+  const rows=ledgerRows(c.id),b=balance(c.id);
+  const dr=rows.filter(r=>r.type==='debit').reduce((s,r)=>s+r.amount,0),cr=rows.filter(r=>r.type==='credit').reduce((s,r)=>s+r.amount,0);
+  body.innerHTML=`
+  <div class="printhead"><h2>ZOYA Crystal &amp; Export — Ledger</h2><div><b>${esc(c.name)}</b> ${esc(c.phone||'')} ${esc(c.city||'')}</div><div class="mut">Date: ${fmtDate(today())}</div></div>
+  <div class="stats">
+   <div class="stat"><span class="mut">Total maal/udhaar (Debit)</span><b>${inr(dr)}</b></div>
+   <div class="stat"><span class="mut">Total payment (Credit)</span><b>${inr(cr)}</b></div>
+   <div class="stat"><span class="mut">Balance</span><b class="${b>0?'due':'ok'}">${inr(Math.abs(b))} ${b>0?'baaki':b<0?'advance':''}</b></div>
+  </div>
+  <div class="row noprint" style="margin-bottom:10px">
+   <button class="pri" id="addEntry">+ Entry</button>
+   ${c.phone&&b>0?`<a class="btn wa" target="_blank" rel="noopener" href="${esc(waLink(c,reminderMsg(c)))}">WhatsApp reminder</a>`:''}
+   <span class="sp"></span>
+   <button id="ledCsv">CSV</button><button id="ledPrint">Print / PDF</button>
+  </div>
+  <div class="tw">${rows.length?`<table><thead><tr><th>Date</th><th>Detail</th><th class="n">Debit</th><th class="n">Credit</th><th class="n">Balance</th><th class="noprint"></th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${fmtDate(r.date)}</td><td>${esc(r.note||'')}</td><td class="n">${r.type==='debit'?inr(r.amount):''}</td><td class="n">${r.type==='credit'?inr(r.amount):''}</td><td class="n">${inr(r.run)}</td><td class="noprint"><button class="danger" data-del="${r.id}">✕</button></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">Abhi koi entry nahi.</div>`}</div>`;
+  $('#addEntry').onclick=()=>openForm('Nayi entry',[
+    {k:'date',label:'Date',type:'date',def:today(),req:1},
+    {k:'type',label:'Type',type:'select',options:[['debit','Debit — maal diya / udhaar'],['credit','Credit — payment mila']]},
+    {k:'amount',label:'Amount (₹)',type:'number',step:'0.01',req:1},
+    {k:'note',label:'Detail (e.g. Amethyst cluster, Bill #12)'}
+  ],{},o=>{const a=parseFloat(o.amount);if(!(a>0))return alert('Amount sahi daaliye');put('entries',{id:uid(),cid:c.id,date:o.date,type:o.type,amount:a,note:o.note})});
+  $('#ledCsv').onclick=()=>downloadCSV(`ledger-${c.name}.csv`,[['Date','Detail','Debit','Credit','Balance'],...rows.map(r=>[r.date,r.note,r.type==='debit'?r.amount:'',r.type==='credit'?r.amount:'',r.run])]);
+  $('#ledPrint').onclick=()=>window.print();
+  body.querySelectorAll('[data-del]').forEach(x=>x.onclick=()=>{if(confirm('Yeh entry delete karein?')){del('entries',x.dataset.del)}});
+}
+
+/* ---------- Stock ---------- */
+function stockFields(){return [{k:'name',label:'Item (e.g. Amethyst, Rose Quartz)',req:1},{k:'category',label:'Category (e.g. Tumble, Cluster, Bead)'},{k:'qty',label:'Quantity',type:'number',step:'0.01',req:1,def:0},{k:'unit',label:'Unit',type:'select',options:[['kg','kg'],['g','gram'],['pcs','pcs'],['box','box']]},{k:'rate',label:'Rate per unit (₹)',type:'number',step:'0.01',def:0},{k:'low',label:'Low stock alert (quantity)',type:'number',step:'0.01',def:0}]}
+$('#addStock').onclick=()=>editStock({});
+$('#stockSearch').oninput=renderStock;
+function editStock(s){
+  openForm(s.id?'Stock edit':'Naya stock item',stockFields(),s,o=>{
+    o.qty=parseFloat(o.qty)||0;o.rate=parseFloat(o.rate)||0;o.low=parseFloat(o.low)||0;
+    if(s.id){Object.assign(s,o);put('stock',s)}else put('stock',{id:uid(),...o});
+  });
+}
+function renderStock(){
+  const q=$('#stockSearch').value.toLowerCase();
+  const list=db.stock.filter(s=>[s.name,s.category].join(' ').toLowerCase().includes(q)).sort((a,b)=>a.name.localeCompare(b.name));
+  $('#stItems').textContent=db.stock.length;
+  $('#stVal').textContent=inr(db.stock.reduce((t,s)=>t+s.qty*s.rate,0));
+  $('#stockDate').textContent='Date: '+fmtDate(today());
+  $('#stockTable').innerHTML=list.length?`<table><thead><tr><th>Item</th><th>Category</th><th class="n">Qty</th><th class="n">Rate</th><th class="n">Value</th><th class="noprint"></th></tr></thead><tbody>
+  ${list.map(s=>`<tr class="${s.low>0&&s.qty<=s.low?'low':''}"><td>${esc(s.name)}${s.low>0&&s.qty<=s.low?' <span class="due">⚠ low</span>':''}</td><td>${esc(s.category||'')}</td><td class="n">${s.qty} ${esc(s.unit)}</td><td class="n">${inr(s.rate)}</td><td class="n">${inr(s.qty*s.rate)}</td>
+  <td class="noprint" style="white-space:nowrap"><button data-s="adj" data-id="${s.id}">±</button> <button data-s="edit" data-id="${s.id}">Edit</button> <button class="danger" data-s="del" data-id="${s.id}">✕</button></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">Abhi koi stock item nahi.</div>`;
+}
+$('#stockTable').onclick=e=>{
+  const b=e.target.closest('button[data-s]');if(!b)return;
+  const s=db.stock.find(x=>x.id===b.dataset.id);if(!s)return;
+  if(b.dataset.s==='edit')editStock(s);
+  if(b.dataset.s==='del'&&confirm(`${s.name} delete karein?`)){del('stock',s.id)}
+  if(b.dataset.s==='adj'){const v=prompt(`${s.name}: quantity badhane ke liye +, ghatane ke liye - likhiye (e.g. 5 ya -2)`);if(v===null)return;const n=parseFloat(v);if(isNaN(n))return alert('Number daaliye');s.qty=Math.round((s.qty+n)*100)/100;put('stock',s)}
+};
+$('#stockCsv').onclick=()=>downloadCSV('stock.csv',[['Item','Category','Qty','Unit','Rate','Value'],...db.stock.map(s=>[s.name,s.category,s.qty,s.unit,s.rate,s.qty*s.rate])]);
+$('#stockPrint').onclick=()=>window.print();
+
+/* ---------- Backup ---------- */
+$('#expJson').onclick=()=>dl(`zoya-backup-${today()}.json`,new Blob([JSON.stringify(db,null,2)],{type:'application/json'}));
+$('#impBtn').onclick=()=>$('#impFile').click();
+$('#impFile').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.customers||!d.entries||!d.stock)throw 0;if(confirm('Maujooda data replace ho jayega. Aage badhein?')){replaceAll(d)}}catch(_){alert('Yeh valid backup file nahi hai')}};
+  r.readAsText(f);e.target.value='';
+};
+$('#csvCust').onclick=()=>downloadCSV('customers.csv',[['Name','Phone','City','Balance'],...db.customers.map(c=>[c.name,c.phone,c.city,balance(c.id)])]);
+$('#csvAll').onclick=()=>downloadCSV('all-ledger.csv',[['Customer','Date','Detail','Type','Amount'],...db.entries.map(e=>[db.customers.find(c=>c.id===e.cid)?.name||'',e.date,e.note,e.type,e.amount])]);
+
+function render(){renderCust();renderLedger();renderStock()}
+render();
+
+/* ---------- Login + cloud sync ---------- */
+$('#loginForm').onsubmit=async e=>{
+  e.preventDefault();$('#loginErr').textContent='';
+  try{await signInWithEmailAndPassword(auth,$('#lEmail').value.trim(),$('#lPass').value)}
+  catch(err){$('#loginErr').textContent='Login nahi hua: email ya password galat hai.'}
+};
+$('#logout').onclick=()=>signOut(auth);
+let permShown=false;
+onAuthStateChanged(auth,u=>{
+  unsubs.forEach(f=>f());unsubs=[];
+  if(!u){$('#login').style.display='flex';db=empty();render();return}
+  $('#login').style.display='none';$('#lPass').value='';
+  COLS.forEach(c=>unsubs.push(onSnapshot(collection(fs,c),snap=>{db[c]=snap.docs.map(d=>d.data());render()},err=>{
+    if(!permShown){permShown=true;alert('Data load nahi hua ('+(err.code||err.message)+'). Firestore rules aur admin UID check kijiye.')}
+  })));
+});
+</script>
+</body>
+</html>
